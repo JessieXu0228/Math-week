@@ -186,138 +186,82 @@
             display: block;
         }
     </style>
-</head>
-<body>
-    <div class="container">
-        <h1>数学谜题打擂台</h1>
-        <h2>来出个题，来解个谜</h2>
+    <script type="module">
+        // 导入Firebase SDK
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+        import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
         
-        <!-- 二维码区域 -->
-        <div class="section">
-            <h3>扫描二维码参与</h3>
-            <div class="qrcode-container">
-                <p>请扫描下方二维码进入平台：</p>
-                <div id="qrcode"></div>
-                <p>或者直接在浏览器中打开：<span id="current-url"></span></p>
-            </div>
-        </div>
+        // Firebase配置
+        const firebaseConfig = {
+            apiKey: "AIzaSyC9V9QbZ2W5J7q4f8Y7c6X5e7r8t9u0v1",
+            authDomain: "math-puzzle-platform.firebaseapp.com",
+            databaseURL: "https://math-puzzle-platform-default-rtdb.firebaseio.com",
+            projectId: "math-puzzle-platform",
+            storageBucket: "math-puzzle-platform.appspot.com",
+            messagingSenderId: "1234567890",
+            appId: "1:1234567890:web:abcdef1234567890"
+        };
         
-        <!-- 功能选项卡 -->
-        <div class="tab-container">
-            <div class="tab active" data-tab="create">出题</div>
-            <div class="tab" data-tab="solve">答题</div>
-            <div class="tab" data-tab="leaderboard">侦探排行榜</div>
-            <div class="tab" data-tab="share">分享谜题</div>
-        </div>
+        // 初始化Firebase
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
         
-        <!-- 分享区域 -->
-        <div class="tab-content" id="share">
-            <div class="section">
-                <h3>分享谜题</h3>
-                <p>点击下方按钮生成分享链接，其他同学通过这个链接就能看到你创建的谜题。</p>
-                <button onclick="generateShareLink()">生成分享链接</button>
-            </div>
-        </div>
-        
-        <!-- 出题区域 -->
-        <div class="tab-content active" id="create">
-            <div class="section">
-                <h3>出一道数学谜题</h3>
-                <form id="create-puzzle-form">
-                    <div class="form-group">
-                        <label for="class-name">班级</label>
-                        <input type="text" id="class-name" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="student-name">姓名</label>
-                        <input type="text" id="student-name" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="puzzle-content">题面</label>
-                        <textarea id="puzzle-content" required></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label for="puzzle-answer">正确答案</label>
-                        <input type="text" id="puzzle-answer" required>
-                    </div>
-                    <button type="submit">提交谜题</button>
-                </form>
-            </div>
-        </div>
-        
-        <!-- 答题区域 -->
-        <div class="tab-content" id="solve">
-            <div class="section">
-                <h3>回答谜题</h3>
-                <div id="puzzle-list" class="puzzle-list">
-                    <!-- 谜题列表将通过JavaScript动态生成 -->
-                </div>
-            </div>
-        </div>
-        
-        <!-- 排行榜区域 -->
-        <div class="tab-content" id="leaderboard">
-            <div class="section">
-                <h3>侦探排行榜</h3>
-                <div class="leaderboard">
-                    <table id="leaderboard-table">
-                        <thead>
-                            <tr>
-                                <th>排名</th>
-                                <th>班级</th>
-                                <th>姓名</th>
-                                <th>答对题数</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <!-- 排行榜数据将通过JavaScript动态生成 -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <script>
         // 数据存储
-        let puzzles = JSON.parse(localStorage.getItem('mathPuzzles')) || [];
-        let leaderboard = JSON.parse(localStorage.getItem('mathLeaderboard')) || [];
+        let puzzles = [];
+        let leaderboard = [];
         
-        // 从URL加载谜题数据
-        function loadPuzzlesFromUrl() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const puzzlesData = urlParams.get('puzzles');
-            if (puzzlesData) {
-                try {
-                    const parsedPuzzles = JSON.parse(decodeURIComponent(puzzlesData));
-                    puzzles = parsedPuzzles;
-                    // 保存到本地存储
-                    localStorage.setItem('mathPuzzles', JSON.stringify(puzzles));
-                    return true;
-                } catch (error) {
-                    console.error('Failed to parse puzzles from URL:', error);
+        // 从Firebase加载数据
+        function loadData() {
+            // 加载谜题
+            const puzzlesRef = ref(database, 'puzzles');
+            onValue(puzzlesRef, (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    puzzles = Object.values(data);
+                    if (document.querySelector('.tab.active[data-tab="solve"]')) {
+                        renderPuzzles();
+                    }
+                } else {
+                    puzzles = [];
+                    if (document.querySelector('.tab.active[data-tab="solve"]')) {
+                        renderPuzzles();
+                    }
                 }
-            }
-            return false;
+            });
+            
+            // 加载排行榜
+            const leaderboardRef = ref(database, 'leaderboard');
+            onValue(leaderboardRef, (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    leaderboard = Object.values(data);
+                    if (document.querySelector('.tab.active[data-tab="leaderboard"]')) {
+                        renderLeaderboard();
+                    }
+                } else {
+                    leaderboard = [];
+                    if (document.querySelector('.tab.active[data-tab="leaderboard"]')) {
+                        renderLeaderboard();
+                    }
+                }
+            });
         }
         
-        // 生成分享链接
-        function generateShareLink() {
-            if (puzzles.length === 0) {
-                alert('暂无谜题可分享');
-                return;
-            }
+        // 保存数据到Firebase
+        function saveData() {
+            // 保存谜题
+            const puzzlesRef = ref(database, 'puzzles');
+            set(puzzlesRef, puzzles.reduce((acc, puzzle) => {
+                acc[puzzle.id] = puzzle;
+                return acc;
+            }, {}));
             
-            const puzzlesData = encodeURIComponent(JSON.stringify(puzzles));
-            const shareUrl = `${window.location.origin}${window.location.pathname}?puzzles=${puzzlesData}`;
-            
-            // 复制到剪贴板
-            navigator.clipboard.writeText(shareUrl).then(() => {
-                alert('分享链接已复制到剪贴板！\n\n其他同学通过这个链接就能看到你创建的谜题。');
-            }).catch(err => {
-                console.error('复制失败:', err);
-                alert('分享链接：\n' + shareUrl);
-            });
+            // 保存排行榜
+            const leaderboardRef = ref(database, 'leaderboard');
+            set(leaderboardRef, leaderboard.reduce((acc, student, index) => {
+                acc[index] = student;
+                return acc;
+            }, {}));
         }
         
         // 生成二维码
@@ -331,10 +275,9 @@
             qrcodeDiv.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodedUrl}" alt="二维码" style="width: 200px; height: 200px;">`;
         }
         
-        // 保存数据到本地存储
-        function saveData() {
-            localStorage.setItem('mathPuzzles', JSON.stringify(puzzles));
-            localStorage.setItem('mathLeaderboard', JSON.stringify(leaderboard));
+        // 模糊匹配答案（忽略标点和空格）
+        function normalizeAnswer(answer) {
+            return answer.replace(/[\s\p{P}\p{S}]/gu, '').toLowerCase();
         }
         
         // 提交谜题
@@ -388,6 +331,20 @@
                 
                 const submittedDate = new Date(puzzle.submittedAt).toLocaleString('zh-CN');
                 
+                // 检查是否是当前用户创建的谜题（这里简化处理，实际应用中需要用户登录）
+                // 为了演示，我们允许所有用户编辑和删除
+                const isOwner = true;
+                
+                let ownerActions = '';
+                if (isOwner) {
+                    ownerActions = `
+                        <div class="owner-actions" style="margin-top: 10px; display: flex; gap: 10px;">
+                            <button class="edit-btn" data-id="${puzzle.id}" style="background-color: #2196F3;">编辑</button>
+                            <button class="delete-btn" data-id="${puzzle.id}" style="background-color: #f44336;">删除</button>
+                        </div>
+                    `;
+                }
+                
                 puzzleItem.innerHTML = `
                     <h4>谜题 #${puzzle.id % 1000}</h4>
                     <div class="puzzle-meta">出题人：${puzzle.className} ${puzzle.studentName} | 提交时间：${submittedDate}</div>
@@ -401,6 +358,7 @@
                     <div class="answer-display" style="display: none;">
                         <strong>正确答案：</strong>${puzzle.answer}
                     </div>
+                    ${ownerActions}
                 `;
                 
                 puzzleList.appendChild(puzzleItem);
@@ -408,11 +366,6 @@
             
             // 添加事件监听
             addPuzzleEventListeners();
-        }
-        
-        // 模糊匹配答案（忽略标点和空格）
-        function normalizeAnswer(answer) {
-            return answer.replace(/[\s\p{P}\p{S}]/gu, '').toLowerCase();
         }
         
         // 添加谜题事件监听
@@ -468,6 +421,43 @@
                     submitBtn.style.backgroundColor = '#ccc';
                     submitBtn.style.cursor = 'not-allowed';
                     input.disabled = true;
+                });
+            });
+            
+            // 编辑按钮
+            document.querySelectorAll('.edit-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const puzzleId = parseInt(this.getAttribute('data-id'));
+                    const puzzle = puzzles.find(p => p.id === puzzleId);
+                    if (puzzle) {
+                        const className = prompt('请输入班级:', puzzle.className);
+                        const studentName = prompt('请输入姓名:', puzzle.studentName);
+                        const content = prompt('请输入题面:', puzzle.content);
+                        const answer = prompt('请输入正确答案:', puzzle.answer);
+                        
+                        if (className && studentName && content && answer) {
+                            puzzle.className = className;
+                            puzzle.studentName = studentName;
+                            puzzle.content = content;
+                            puzzle.answer = answer;
+                            saveData();
+                            renderPuzzles();
+                            alert('谜题编辑成功！');
+                        }
+                    }
+                });
+            });
+            
+            // 删除按钮
+            document.querySelectorAll('.delete-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const puzzleId = parseInt(this.getAttribute('data-id'));
+                    if (confirm('确定要删除这个谜题吗？')) {
+                        puzzles = puzzles.filter(p => p.id !== puzzleId);
+                        saveData();
+                        renderPuzzles();
+                        alert('谜题删除成功！');
+                    }
                 });
             });
         }
@@ -542,11 +532,92 @@
         // 初始化
         document.addEventListener('DOMContentLoaded', function() {
             generateQRCode();
-            // 尝试从URL加载谜题数据
-            loadPuzzlesFromUrl();
+            // 从Firebase加载数据
+            loadData();
             updateLeaderboard();
             renderLeaderboard();
         });
     </script>
+</head>
+<body>
+    <div class="container">
+        <h1>数学谜题打擂台</h1>
+        <h2>来出个题，来解个谜</h2>
+        
+        <!-- 二维码区域 -->
+        <div class="section">
+            <h3>扫描二维码参与</h3>
+            <div class="qrcode-container">
+                <p>请扫描下方二维码进入平台：</p>
+                <div id="qrcode"></div>
+                <p>或者直接在浏览器中打开：<span id="current-url"></span></p>
+            </div>
+        </div>
+        
+        <!-- 功能选项卡 -->
+        <div class="tab-container">
+            <div class="tab active" data-tab="create">出题</div>
+            <div class="tab" data-tab="solve">答题</div>
+            <div class="tab" data-tab="leaderboard">侦探排行榜</div>
+        </div>
+        
+        <!-- 出题区域 -->
+        <div class="tab-content active" id="create">
+            <div class="section">
+                <h3>出一道数学谜题</h3>
+                <form id="create-puzzle-form">
+                    <div class="form-group">
+                        <label for="class-name">班级</label>
+                        <input type="text" id="class-name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="student-name">姓名</label>
+                        <input type="text" id="student-name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="puzzle-content">题面</label>
+                        <textarea id="puzzle-content" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="puzzle-answer">正确答案</label>
+                        <input type="text" id="puzzle-answer" required>
+                    </div>
+                    <button type="submit">提交谜题</button>
+                </form>
+            </div>
+        </div>
+        
+        <!-- 答题区域 -->
+        <div class="tab-content" id="solve">
+            <div class="section">
+                <h3>回答谜题</h3>
+                <div id="puzzle-list" class="puzzle-list">
+                    <!-- 谜题列表将通过JavaScript动态生成 -->
+                </div>
+            </div>
+        </div>
+        
+        <!-- 排行榜区域 -->
+        <div class="tab-content" id="leaderboard">
+            <div class="section">
+                <h3>侦探排行榜</h3>
+                <div class="leaderboard">
+                    <table id="leaderboard-table">
+                        <thead>
+                            <tr>
+                                <th>排名</th>
+                                <th>班级</th>
+                                <th>姓名</th>
+                                <th>答对题数</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- 排行榜数据将通过JavaScript动态生成 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
