@@ -207,6 +207,16 @@
             <div class="tab active" data-tab="create">出题</div>
             <div class="tab" data-tab="solve">答题</div>
             <div class="tab" data-tab="leaderboard">侦探排行榜</div>
+            <div class="tab" data-tab="share">分享谜题</div>
+        </div>
+        
+        <!-- 分享区域 -->
+        <div class="tab-content" id="share">
+            <div class="section">
+                <h3>分享谜题</h3>
+                <p>点击下方按钮生成分享链接，其他同学通过这个链接就能看到你创建的谜题。</p>
+                <button onclick="generateShareLink()">生成分享链接</button>
+            </div>
         </div>
         
         <!-- 出题区域 -->
@@ -272,6 +282,43 @@
         // 数据存储
         let puzzles = JSON.parse(localStorage.getItem('mathPuzzles')) || [];
         let leaderboard = JSON.parse(localStorage.getItem('mathLeaderboard')) || [];
+        
+        // 从URL加载谜题数据
+        function loadPuzzlesFromUrl() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const puzzlesData = urlParams.get('puzzles');
+            if (puzzlesData) {
+                try {
+                    const parsedPuzzles = JSON.parse(decodeURIComponent(puzzlesData));
+                    puzzles = parsedPuzzles;
+                    // 保存到本地存储
+                    localStorage.setItem('mathPuzzles', JSON.stringify(puzzles));
+                    return true;
+                } catch (error) {
+                    console.error('Failed to parse puzzles from URL:', error);
+                }
+            }
+            return false;
+        }
+        
+        // 生成分享链接
+        function generateShareLink() {
+            if (puzzles.length === 0) {
+                alert('暂无谜题可分享');
+                return;
+            }
+            
+            const puzzlesData = encodeURIComponent(JSON.stringify(puzzles));
+            const shareUrl = `${window.location.origin}${window.location.pathname}?puzzles=${puzzlesData}`;
+            
+            // 复制到剪贴板
+            navigator.clipboard.writeText(shareUrl).then(() => {
+                alert('分享链接已复制到剪贴板！\n\n其他同学通过这个链接就能看到你创建的谜题。');
+            }).catch(err => {
+                console.error('复制失败:', err);
+                alert('分享链接：\n' + shareUrl);
+            });
+        }
         
         // 生成二维码
         function generateQRCode() {
@@ -495,6 +542,8 @@
         // 初始化
         document.addEventListener('DOMContentLoaded', function() {
             generateQRCode();
+            // 尝试从URL加载谜题数据
+            loadPuzzlesFromUrl();
             updateLeaderboard();
             renderLeaderboard();
         });
