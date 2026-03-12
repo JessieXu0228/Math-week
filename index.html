@@ -210,36 +210,33 @@
         
         // 从Firebase加载数据
         function loadData() {
+            console.log('开始加载Firebase数据');
             // 加载谜题
             firebase.database().ref('puzzles').on('value', function(snapshot) {
                 const data = snapshot.val();
+                console.log('获取到谜题数据:', data);
                 if (data) {
                     puzzles = Object.values(data);
-                    if (document.querySelector('.tab.active[data-tab="solve"]')) {
-                        renderPuzzles();
-                    }
+                    console.log('转换后的谜题数据:', puzzles);
                 } else {
                     puzzles = [];
-                    if (document.querySelector('.tab.active[data-tab="solve"]')) {
-                        renderPuzzles();
-                    }
+                    console.log('没有谜题数据');
                 }
+                // 无论是否在答题tab，都重新渲染谜题列表
+                renderPuzzles();
             });
             
             // 加载排行榜
             firebase.database().ref('leaderboard').on('value', function(snapshot) {
                 const data = snapshot.val();
+                console.log('获取到排行榜数据:', data);
                 if (data) {
                     leaderboard = Object.values(data);
-                    if (document.querySelector('.tab.active[data-tab="leaderboard"]')) {
-                        renderLeaderboard();
-                    }
                 } else {
                     leaderboard = [];
-                    if (document.querySelector('.tab.active[data-tab="leaderboard"]')) {
-                        renderLeaderboard();
-                    }
                 }
+                // 无论是否在排行榜tab，都重新渲染排行榜
+                renderLeaderboard();
             });
         }
         
